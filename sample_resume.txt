@@ -1,0 +1,20 @@
+Darshil Student
+Email: darshil@example.com
+
+Education
+B.Tech in Artificial Intelligence and Machine Learning
+
+Skills
+Python, SQL, Machine Learning, Pandas, NumPy, Git, FastAPI
+
+Projects
+Built a machine learning classifier API for resume-job matching.
+Developed a data dashboard for skill gap analysis.
+Created REST APIs and stored reports in a database.
+
+Experience
+Academic project work in NLP, data preprocessing, model evaluation, and backend development.
+
+GitHub
+github.com/darshil-demo
+
