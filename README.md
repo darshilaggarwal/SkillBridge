@@ -121,3 +121,40 @@ For quick local testing, you can also leave `DATABASE_URL` empty and the backend
 In local development, progress is stored in `backend/skillbridge_dev.db`.
 
 For deployment, use the included PostgreSQL configuration and set `DATABASE_URL` to a hosted database such as Supabase, Neon, Render PostgreSQL, or Railway PostgreSQL. The user accounts, reports, roadmap progress, and analysis history will then be stored in that cloud database.
+
+## Vercel Deployment
+
+This repository includes Vercel configuration for a single deployment:
+
+- React/Vite frontend is built from `frontend/`
+- FastAPI backend is exposed through `api/index.py`
+- API requests use the same domain through `/api/...`
+
+### Required Vercel Environment Variables
+
+Set these in the Vercel project settings before production deployment:
+
+```text
+DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:PORT/DATABASE
+SECRET_KEY=use-a-long-random-secret
+```
+
+Optional variables:
+
+```text
+FRONTEND_ORIGIN=https://your-vercel-domain.vercel.app
+FRONTEND_ORIGINS=https://your-custom-domain.com,https://your-preview-domain.vercel.app
+UPLOAD_DIR=/tmp/skillbridge_uploads
+```
+
+If `DATABASE_URL` is not set on Vercel, the backend falls back to `/tmp/skillbridge_dev.db`. That is useful only for testing because serverless `/tmp` storage is not permanent. Use hosted PostgreSQL for real saved user progress.
+
+### Deploy Commands
+
+```bash
+npm install -g vercel
+vercel
+vercel --prod
+```
+
+For frontend-only deployment, set the Vercel root directory to `frontend` and set `VITE_API_URL` to the deployed backend URL.

@@ -40,7 +40,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./com
 import { Progress } from "./components/ui/progress";
 import { cn } from "./lib/utils";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
 
 const TABS = [
   { id: "overview", label: "Overview", icon: BarChart3 },

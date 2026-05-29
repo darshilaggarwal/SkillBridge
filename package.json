@@ -1,0 +1,14 @@
+{
+  "name": "skillbridge-ai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload",
+    "deploy": "vercel --prod"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
