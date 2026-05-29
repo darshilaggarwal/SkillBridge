@@ -124,11 +124,13 @@ For deployment, use the included PostgreSQL configuration and set `DATABASE_URL`
 
 ## Vercel Deployment
 
-This repository includes Vercel configuration for a single deployment:
+This repository includes Vercel Services configuration for a single deployment:
 
 - React/Vite frontend is built from `frontend/`
 - FastAPI backend is exposed through `api/index.py`
-- API requests use the same domain through `/api/...`
+- API requests use the same domain through `/_/backend/api/...`
+
+Vercel Services is currently configured through `experimentalServices` in `vercel.json`. In the Vercel dashboard, set the project Framework Preset to **Services**.
 
 ### Required Vercel Environment Variables
 
