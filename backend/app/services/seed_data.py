@@ -5,6 +5,11 @@ from app.models import JobRole
 
 JOB_ROLES = [
     {
+        "title": "JD-Based Analysis",
+        "description": "Universal analysis profile generated directly from the pasted job description.",
+        "skills": {"must_have": [], "good_to_have": []},
+    },
+    {
         "title": "Machine Learning Engineer",
         "description": (
             "Builds, evaluates, deploys, and monitors machine learning systems. "
@@ -151,4 +156,3 @@ def seed_job_roles(db: Session) -> None:
         db.add(JobRole(**role_data))
 
     db.commit()
-

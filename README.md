@@ -2,7 +2,7 @@
 
 Resume-to-job skill gap analyzer for an AIML live project.
 
-The app lets a student upload a resume, choose a target job role, optionally paste a real job description, and receive:
+The app lets any professional upload a resume, paste a real job description, and receive:
 
 - Extracted resume skills
 - Matched and missing skills
@@ -19,7 +19,7 @@ The app lets a student upload a resume, choose a target job role, optionally pas
 - Frontend: React + Vite
 - Backend: FastAPI
 - Database: PostgreSQL-ready with SQLAlchemy
-- ML/NLP: Python skill extraction + TF-IDF cosine similarity using scikit-learn
+- ML/NLP: cross-domain JD requirement extraction + TF-IDF cosine similarity using scikit-learn
 
 ## Project Structure
 
@@ -97,10 +97,10 @@ For quick local testing, you can also leave `DATABASE_URL` empty and the backend
 - User-specific dashboard, reports, and roadmap progress
 - Resume section parsing for education, skills, projects, experience, certifications, links, and achievements
 - Evidence-based skill heatmap showing strong, medium, weak, and missing skills
-- Job description analyzer that extracts JD skills and compares them with the resume
+- Cross-domain job description analyzer that identifies required and preferred JD skills and compares them with the resume
 - Automated roadmap checklist with weekly tasks, estimated hours, priority, resources, and project ideas
 - Resume improvement suggestions based on ATS checks and missing skill evidence
-- Analysis history with previous scores and target roles
+- Analysis history with previous scores and inferred job titles
 - Roadmap status tracking: not started, in progress, completed
 - PostgreSQL-ready schema with JSON fields for ML output
 - Signed-token authentication with password hashing
@@ -111,10 +111,9 @@ For quick local testing, you can also leave `DATABASE_URL` empty and the backend
 2. Start frontend.
 3. Create an account or sign in.
 4. Upload a PDF, DOCX, or TXT resume.
-5. Select a target role.
-6. Paste a job description if available.
-7. Click Generate AI Roadmap.
-8. View the dashboard, skill evidence heatmap, JD match, improvement suggestions, and roadmap checklist.
+5. Paste the complete job description.
+6. Click Generate Report.
+7. View the dashboard, skill evidence heatmap, JD match, improvement suggestions, and roadmap checklist.
 
 ## Cloud Storage Note
 

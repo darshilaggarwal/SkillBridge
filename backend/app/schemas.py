@@ -55,6 +55,8 @@ class AnalysisReportOut(BaseModel):
     ats_score: float = 0
     career_readiness_score: float = 0
     jd_match_score: float = 0
+    target_title: str = "JD-Based Analysis"
+    jd_requirements: dict = Field(default_factory=dict)
     matched_skills: list[str]
     missing_skills: list[str]
     optional_matches: list[str]

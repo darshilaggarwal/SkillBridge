@@ -68,19 +68,27 @@ def me(current_user: User = Depends(get_current_user)) -> User:
 
 @router.post("/analyze", response_model=AnalysisReportOut)
 async def analyze(
-    role_id: int = Form(...),
     resume: UploadFile = File(...),
-    job_description: str = Form(""),
+    job_description: str = Form(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AnalysisReport:
-    job_role = db.get(JobRole, role_id)
+    if len(job_description.strip()) < 40:
+        raise HTTPException(status_code=400, detail="Paste a complete job description before generating a report.")
+
+    job_role = db.query(JobRole).filter(JobRole.title == "JD-Based Analysis").first()
     if not job_role:
-        raise HTTPException(status_code=404, detail="Target job role not found.")
+        job_role = JobRole(
+            title="JD-Based Analysis",
+            description="Universal analysis profile generated directly from the pasted job description.",
+            skills={"must_have": [], "good_to_have": []},
+        )
+        db.add(job_role)
+        db.flush()
 
     file_path = await save_upload(resume)
     resume_text = extract_text(file_path)
-    analysis = analyze_resume(resume_text, job_role, job_description)
+    analysis = analyze_resume(resume_text, job_description)
 
     resume_record = Resume(
         user_id=current_user.id,
@@ -101,6 +109,9 @@ async def analyze(
         ats_score=analysis["ats_score"],
         career_readiness_score=analysis["career_readiness_score"],
         jd_match_score=analysis["jd_match_score"],
+        target_title=analysis["target_title"],
+        job_description=job_description,
+        jd_requirements=analysis["jd_requirements"],
         matched_skills=analysis["matched_skills"],
         missing_skills=analysis["missing_skills"],
         optional_matches=analysis["optional_matches"],
@@ -165,7 +176,7 @@ def dashboard(
     history = [
         DashboardHistoryItem(
             id=report.id,
-            role=report.job_role.title,
+            role=report.target_title or report.job_role.title,
             resume_score=report.resume_score,
             ats_score=report.ats_score or 0,
             career_readiness_score=report.career_readiness_score or 0,

@@ -3,8 +3,12 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.models import JobRole
-from app.services.skill_extractor import estimate_project_strength, extract_skills, normalize_skill
+from app.services.skill_extractor import (
+    estimate_project_strength,
+    extract_jd_requirements,
+    extract_skills,
+    normalize_skill,
+)
 
 
 SECTION_ALIASES = {
@@ -32,16 +36,17 @@ ACTION_VERBS = [
 ]
 
 
-def analyze_resume(text: str, job_role: JobRole, job_description: str = "") -> dict:
+def analyze_resume(text: str, job_description: str) -> dict:
     sections = parse_resume_sections(text)
-    extracted_skills = extract_skills(text)
+    jd_requirements = extract_jd_requirements(job_description)
+    must_have = jd_requirements["required"]
+    good_to_have = jd_requirements["preferred"]
+    jd_skills = jd_requirements["all"]
+    extracted_skills = extract_skills(text, extra_skills=jd_skills)
     extracted_set = {normalize_skill(skill) for skill in extracted_skills}
-    must_have = [normalize_skill(skill) for skill in job_role.skills.get("must_have", [])]
-    good_to_have = [normalize_skill(skill) for skill in job_role.skills.get("good_to_have", [])]
-
-    jd_skills = extract_skills(job_description) if job_description.strip() else []
     jd_skill_set = {normalize_skill(skill) for skill in jd_skills}
-    target_skill_set = set(must_have) | set(good_to_have) | jd_skill_set
+    target_skill_set = set(jd_skill_set)
+    target_title = infer_job_title(job_description)
 
     matched_required = sorted(skill for skill in must_have if skill in extracted_set)
     missing_required = sorted(skill for skill in must_have if skill not in extracted_set)
@@ -51,7 +56,7 @@ def analyze_resume(text: str, job_role: JobRole, job_description: str = "") -> d
 
     required_score = ratio_score(len(matched_required), len(must_have))
     optional_score = ratio_score(len(optional_matches), len(good_to_have))
-    semantic_score = semantic_similarity_score(text, job_role, job_description)
+    semantic_score = semantic_similarity_score(text, job_description)
     project_score = estimate_project_strength(text)
     profile_score = profile_quality_score(sections)
     jd_match_score = ratio_score(len(jd_matched), len(jd_skill_set)) if jd_skill_set else 0.0
@@ -99,11 +104,13 @@ def analyze_resume(text: str, job_role: JobRole, job_description: str = "") -> d
         missing_required=missing_required,
         jd_missing=jd_missing,
         weak_evidence=[item for item in skill_evidence if item["status"] in {"weak", "medium"}],
-        role_title=job_role.title,
+        role_title=target_title,
         ats_findings=ats_findings,
     )
 
     return {
+        "target_title": target_title,
+        "jd_requirements": jd_requirements,
         "extracted_skills": extracted_skills,
         "matched_skills": matched_required,
         "missing_skills": missing_required,
@@ -314,7 +321,7 @@ def build_improvement_suggestions(
         suggestions.append(
             suggestion(
                 "Close priority skill gaps",
-                f"Focus first on {', '.join(missing_skills[:3])}. These are required for the selected role.",
+                f"Focus first on {', '.join(missing_skills[:3])}. These are required by the job description.",
                 "high",
                 "Skills",
             )
@@ -496,20 +503,15 @@ def average(values: list[int | float]) -> float:
     return sum(values) / len(values)
 
 
-def semantic_similarity_score(text: str, job_role: JobRole, job_description: str = "") -> float:
-    role_text = " ".join(
-        [
-            job_role.title,
-            job_role.description,
-            " ".join(job_role.skills.get("must_have", [])),
-            " ".join(job_role.skills.get("good_to_have", [])),
-            job_description,
-        ]
-    )
-
+def semantic_similarity_score(text: str, job_description: str) -> float:
     try:
-        vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
-        matrix = vectorizer.fit_transform([text, role_text])
+        vectorizer = TfidfVectorizer(
+            stop_words="english",
+            ngram_range=(1, 3),
+            sublinear_tf=True,
+            max_features=5000,
+        )
+        matrix = vectorizer.fit_transform([text, job_description])
         similarity = cosine_similarity(matrix[0:1], matrix[1:2])[0][0]
         return float(similarity * 100)
     except ValueError:
@@ -530,6 +532,25 @@ def format_section_name(section: str) -> str:
     return section.replace("_", " ").title()
 
 
+def infer_job_title(job_description: str) -> str:
+    lines = [line.strip(" •*-\t") for line in job_description.splitlines() if line.strip()]
+
+    for line in lines[:12]:
+        match = re.match(r"(?i)(?:job\s*title|position|role)\s*:\s*(.+)", line)
+        if match:
+            return match.group(1).strip()[:120]
+
+    for line in lines[:4]:
+        clean_line = re.sub(r"\s+", " ", line).strip(" :")
+        if 1 < len(clean_line.split()) <= 8 and not any(
+            word in clean_line.lower()
+            for word in ["description", "requirement", "qualification", "responsibilit", "about us"]
+        ):
+            return clean_line[:120]
+
+    return "JD-Based Analysis"
+
+
 def project_idea_for_skill(skill: str, role_title: str) -> str:
     ideas = {
         "FastAPI": "Deploy a trained ML model behind a FastAPI prediction endpoint.",
@@ -548,4 +569,3 @@ def project_idea_for_skill(skill: str, role_title: str) -> str:
         "RAG": "Create a resume Q&A assistant that retrieves relevant project and skill evidence.",
     }
     return ideas.get(skill, f"Build a small {role_title} mini-project that clearly uses {skill}.")
-

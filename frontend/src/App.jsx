@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -52,7 +52,7 @@ const TABS = [
 
 const TRUST_BADGES = [
   { label: "ATS Friendly", icon: ShieldCheck },
-  { label: "Role Matching", icon: Target },
+  { label: "JD Matching", icon: Target },
   { label: "Skill Gap Detection", icon: Radar },
   { label: "Personalized Roadmap", icon: Route },
 ];
@@ -60,7 +60,7 @@ const TRUST_BADGES = [
 const FEATURE_CARDS = [
   { title: "Resume Parsing", icon: FileText, text: "Extract sections, projects, skills, links, and proof signals from uploaded resumes." },
   { title: "Job Description Analysis", icon: Target, text: "Paste any job description and detect required tools, keywords, and role expectations." },
-  { title: "Skill Gap Detection", icon: Radar, text: "Compare resume evidence against role and JD requirements with clear priority gaps." },
+  { title: "Skill Gap Detection", icon: Radar, text: "Compare resume evidence against JD requirements with clear priority gaps." },
   { title: "Match Score", icon: Gauge, text: "Show resume, ATS, job description, and readiness scores in one report." },
   { title: "Missing Skills", icon: Layers3, text: "Separate matched, missing, weak, optional, and critical skills for fast decision-making." },
   { title: "Personalized Roadmap", icon: BookOpenCheck, text: "Create weekly modules with checklists, hours, resources, and portfolio tasks." },
@@ -85,9 +85,9 @@ const PROCESS_STEPS = [
   },
   {
     step: "02",
-    title: "Compare with target role",
-    text: "Choose a job role and paste the job description. The system compares exact requirements with your current evidence.",
-    tags: ["Role match", "JD keywords", "Gap score"],
+    title: "Compare with job description",
+    text: "Paste any job description. The system derives exact requirements and compares them with your current evidence.",
+    tags: ["JD requirements", "Keyword match", "Gap score"],
     icon: SearchCheck,
     featured: true,
   },
@@ -108,7 +108,7 @@ const PROCESS_STEPS = [
   {
     step: "05",
     title: "Track progress",
-    text: "Save reports, update roadmap status, and compare your readiness across different roles over time.",
+    text: "Save reports, update roadmap status, and compare your readiness across different job descriptions over time.",
     tags: ["Saved reports", "Progress", "History"],
     icon: BarChart3,
   },
@@ -132,8 +132,6 @@ function App() {
     const saved = localStorage.getItem("skillbridge_user");
     return saved ? JSON.parse(saved) : null;
   });
-  const [roles, setRoles] = useState([]);
-  const [selectedRoleId, setSelectedRoleId] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [jobDescription, setJobDescription] = useState("");
   const [dashboard, setDashboard] = useState(null);
@@ -149,27 +147,9 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/job-roles`)
-      .then((response) => {
-        if (!response.ok) throw new Error("Backend is not responding.");
-        return response.json();
-      })
-      .then((data) => {
-        setRoles(data);
-        if (data.length > 0) setSelectedRoleId(String(data[0].id));
-      })
-      .catch((err) => setError(err.message));
-  }, []);
-
-  useEffect(() => {
     if (!token) return;
     loadDashboard();
   }, [token]);
-
-  const selectedRole = useMemo(
-    () => roles.find((role) => String(role.id) === String(selectedRoleId)),
-    [roles, selectedRoleId],
-  );
 
   async function authFetch(path, options = {}) {
     const response = await fetch(`${API_URL}${path}`, {
@@ -196,7 +176,6 @@ function App() {
       const data = await response.json();
       setDashboard(data);
       setReport(nextReport || data.latest_report);
-      if (data.latest_report?.job_role?.id) setSelectedRoleId(String(data.latest_report.job_role.id));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -231,14 +210,13 @@ function App() {
       return;
     }
 
-    if (!selectedRoleId) {
-      setError("Choose a target job role.");
+    if (jobDescription.trim().length < 40) {
+      setError("Paste a complete job description before generating a report.");
       return;
     }
 
     const formData = new FormData();
     formData.append("resume", resumeFile);
-    formData.append("role_id", selectedRoleId);
     formData.append("job_description", jobDescription);
 
     setLoading(true);
@@ -294,7 +272,7 @@ function App() {
   const toggleTheme = () => setTheme((value) => (value === "dark" ? "light" : "dark"));
 
   if (!token) {
-    return <LandingPage onAuth={handleAuth} roles={roles} theme={theme} onThemeToggle={toggleTheme} />;
+    return <LandingPage onAuth={handleAuth} theme={theme} onThemeToggle={toggleTheme} />;
   }
 
   return (
@@ -345,10 +323,6 @@ function App() {
 
         <div className="grid gap-10 xl:grid-cols-[360px_minmax(0,1fr)]">
           <AnalyzerPanel
-            roles={roles}
-            selectedRole={selectedRole}
-            selectedRoleId={selectedRoleId}
-            setSelectedRoleId={setSelectedRoleId}
             resumeFile={resumeFile}
             setResumeFile={setResumeFile}
             jobDescription={jobDescription}
@@ -379,7 +353,7 @@ function App() {
   );
 }
 
-function LandingPage({ onAuth, roles, theme, onThemeToggle }) {
+function LandingPage({ onAuth, theme, onThemeToggle }) {
   const [mode, setMode] = useState("signup");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -987,10 +961,6 @@ function AuthPanel({ mode, setMode, form, setForm, loading, error, submitAuth })
 }
 
 function AnalyzerPanel({
-  roles,
-  selectedRole,
-  selectedRoleId,
-  setSelectedRoleId,
   resumeFile,
   setResumeFile,
   jobDescription,
@@ -1010,31 +980,6 @@ function AnalyzerPanel({
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={onAnalyze}>
-          <FormField label="Target role">
-            <select
-              className="h-11 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-              value={selectedRoleId}
-              onChange={(event) => setSelectedRoleId(event.target.value)}
-            >
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.title}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          {selectedRole && (
-            <div className="rounded-lg border border-border/70 bg-muted/40 p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-md bg-indigo-500/10 p-2 text-indigo-500">
-                  <BriefcaseBusiness className="h-4 w-4" />
-                </div>
-                <p className="text-sm leading-6 text-muted-foreground">{selectedRole.description}</p>
-              </div>
-            </div>
-          )}
-
           <FormField label="Resume">
             <label className="group flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/35 p-5 text-center transition hover:border-indigo-400/60 hover:bg-indigo-500/5">
               <div className="rounded-lg border border-border/70 bg-background p-3 text-muted-foreground transition group-hover:text-indigo-500">
@@ -1058,8 +1003,12 @@ function AnalyzerPanel({
               className="min-h-40 resize-y rounded-lg border border-input bg-background/70 px-3 py-3 text-sm leading-6 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
               value={jobDescription}
               onChange={(event) => setJobDescription(event.target.value)}
-              placeholder="Paste a job description to detect exact missing skills..."
+              placeholder="Paste the complete job description. The system will derive the required skills, compare your evidence, and create a roadmap..."
+              required
             />
+            <span className="text-xs text-muted-foreground">
+              Works with any profession. Add the complete JD for a more accurate report.
+            </span>
           </FormField>
 
           <Button variant="emerald" size="lg" className="w-full" disabled={loading}>
@@ -1079,7 +1028,7 @@ function DashboardView({ activeTab, dashboard, report, setActiveTab, onOpenRepor
         <CardContent className="grid gap-6 p-5 md:grid-cols-[132px_minmax(0,1fr)]">
           <CircularScore value={report.career_readiness_score} label="Match" small />
           <div className="self-center">
-            <Badge variant="violet" className="mb-3">{report.job_role.title}</Badge>
+            <Badge variant="violet" className="mb-3">{report.target_title || report.job_role.title}</Badge>
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Report</h2>
             <p className="mt-2 max-w-xl leading-7 text-muted-foreground">
               Your score, skill gaps, and next steps are grouped below.
@@ -1443,7 +1392,7 @@ function EmptyDashboard() {
         </div>
         <h2 className="mt-6 text-balance text-3xl font-semibold">Create your first report.</h2>
         <p className="mt-3 max-w-md leading-7 text-muted-foreground">
-          Upload a resume, select a target role, and paste a job description. The saved report will appear here.
+          Upload a resume and paste a complete job description. The saved JD-based report will appear here.
         </p>
       </CardContent>
     </Card>
